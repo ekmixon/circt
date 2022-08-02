@@ -29,9 +29,7 @@ def get_value(obj) -> ir.Value:
     return obj
   if hasattr(obj, "result"):
     return obj.result
-  if hasattr(obj, "value"):
-    return obj.value
-  return None
+  return obj.value if hasattr(obj, "value") else None
 
 
 def connect(destination, source):
@@ -65,9 +63,7 @@ def var_to_attribute(obj, none_on_fail: bool = False) -> ir.Attribute:
     return ir.StringAttr.get(obj)
   if isinstance(obj, list):
     arr = [var_to_attribute(x, none_on_fail) for x in obj]
-    if all(arr):
-      return ir.ArrayAttr.get(arr)
-    return None
+    return ir.ArrayAttr.get(arr) if all(arr) else None
   if none_on_fail:
     return None
   raise TypeError(f"Cannot convert type '{type(obj)}' to MLIR attribute")
@@ -226,12 +222,12 @@ class BackedgeBuilder(AbstractContextManager):
     errors = []
     for edge in list(self.edges):
       # TODO: Make this use `UnconnectedSignalError`.
-      msg = "Port:       " + edge.port_name + "\n"
+      msg = f"Port:       {edge.port_name}" + "\n"
       if edge.instance_of is not None:
         msg += "InstanceOf: " + str(edge.instance_of).split(" {")[0] + "\n"
       if edge.op_view is not None:
         op = edge.op_view.operation
-        msg += "Instance:   " + str(op)
+        msg += f"Instance:   {str(op)}"
       errors.append(msg)
 
     if errors:
@@ -276,10 +272,7 @@ class NamedValueOpView:
                **kwargs):
     # Set result_indices to name each result.
     result_names = self.result_names()
-    result_indices = {}
-    for i in range(len(result_names)):
-      result_indices[result_names[i]] = i
-
+    result_indices = {result_names[i]: i for i in range(len(result_names))}
     # Set operand_indices to name each operand. Give them an initial value,
     # either from input_port_mapping or a default value.
     backedges = {}

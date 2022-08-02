@@ -9,7 +9,7 @@ class Taps:
   taps = Output(dim(8, 3))
 
   @generator
-  def build(mod):
+  def build(self):
     return {"taps": [203, 100, 23]}
 
 

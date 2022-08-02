@@ -14,6 +14,9 @@ from circt.support import connect
 @module
 def PolynomialCompute(coefficients: Coefficients):
 
+
+
+
   class PolynomialCompute:
     """Module to compute ax^3 + bx^2 + cx + d for design-time coefficients"""
 
@@ -33,11 +36,11 @@ def PolynomialCompute(coefficients: Coefficients):
           [str(x) for x in coefficients.coeff])
 
     @generator
-    def construct(mod):
+    def construct(self):
       """Implement this module for input 'x'."""
 
-      x = mod.x
-      taps = list()
+      x = self.x
+      taps = []
       for power, coeff in enumerate(coefficients.coeff):
         coeffVal = hw.ConstantOp.create(types.i32, coeff)
         if power == 0:
@@ -47,7 +50,7 @@ def PolynomialCompute(coefficients: Coefficients):
           if power == 1:
             currPow = x
           else:
-            x_power = [x for i in range(power)]
+            x_power = [x for _ in range(power)]
             currPow = comb.MulOp.create(*x_power)
           newPartialSum = comb.AddOp.create(
               partialSum, comb.MulOp.create(coeffVal, currPow))
@@ -56,6 +59,7 @@ def PolynomialCompute(coefficients: Coefficients):
 
       # Final output
       return {"y": taps[-1]}
+
 
   return PolynomialCompute
 

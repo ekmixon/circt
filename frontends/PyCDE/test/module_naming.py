@@ -7,13 +7,17 @@ import circt.dialects.hw
 @pycde.module
 def Parameterized(param):
 
+
+
+
   class Module:
     x = pycde.Input(pycde.types.i1)
     y = pycde.Output(pycde.types.i1)
 
     @pycde.generator
-    def construct(mod):
-      return {"y": mod.x}
+    def construct(self):
+      return {"y": self.x}
+
 
   return Module
 
@@ -24,8 +28,8 @@ class UnParameterized:
   y = pycde.Output(pycde.types.i1)
 
   @pycde.generator
-  def construct(mod):
-    return {"y": mod.x}
+  def construct(self):
+    return {"y": self.x}
 
 
 class Test(pycde.System):

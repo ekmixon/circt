@@ -102,9 +102,7 @@ if config.quartus_path != "":
 # Enable Vivado if it has been detected.
 if config.vivado_path != "":
   tool_dirs.append(config.vivado_path)
-  tools.append('xvlog')
-  tools.append('xelab')
-  tools.append('xsim')
+  tools.extend(('xvlog', 'xelab', 'xsim'))
   config.available_features.add('ieee-sim')
   config.available_features.add('vivado')
   config.substitutions.append(
@@ -122,9 +120,7 @@ if config.questa_path != "":
                                  os.environ['LM_LICENSE_FILE'])
 
   tool_dirs.append(config.questa_path)
-  tools.append('vlog')
-  tools.append('vsim')
-
+  tools.extend(('vlog', 'vsim'))
   config.substitutions.append(
       ('%questa', os.path.join(config.questa_path, "vsim")))
   config.substitutions.append(

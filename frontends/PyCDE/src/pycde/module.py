@@ -98,28 +98,27 @@ class module:
   #   - A simple (non-parameterized) module has been wrapped and the user wants
   #   to construct one. Just forward to the module class' constructor.
   def __call__(self, *args, **kwargs):
-    if self.func is not None:
-      param_values = self.sig.bind(*args, **kwargs)
-      param_values.apply_defaults()
-      cls = self.func(*args, **kwargs)
-      if cls is None:
-        raise ValueError("Parameterization function must return module class")
+    if self.func is None:
+      return self.mod(*args, **kwargs)
+    param_values = self.sig.bind(*args, **kwargs)
+    param_values.apply_defaults()
+    cls = self.func(*args, **kwargs)
+    if cls is None:
+      raise ValueError("Parameterization function must return module class")
 
-      # Function arguments which start with '_' don't become parameters.
-      params = {
-          n: v
-          for n, v in param_values.arguments.items()
-          if not n.startswith("_")
-      }
-      mod = _module_base(cls, self.extern_name is not None, params)
+    # Function arguments which start with '_' don't become parameters.
+    params = {
+        n: v
+        for n, v in param_values.arguments.items()
+        if not n.startswith("_")
+    }
+    mod = _module_base(cls, self.extern_name is not None, params)
 
-      if self.extern_name:
-        _register_generator(cls.__name__, "extern_instantiate",
-                            self._instantiate,
-                            mlir.ir.DictAttr.get(mod._parameters))
-      return mod
-
-    return self.mod(*args, **kwargs)
+    if self.extern_name:
+      _register_generator(cls.__name__, "extern_instantiate",
+                          self._instantiate,
+                          mlir.ir.DictAttr.get(mod._parameters))
+    return mod
 
   # Generator for external modules.
   def _instantiate(self, op):
@@ -174,6 +173,8 @@ def externmodule(cls_or_name):
 def _module_base(cls, extern: bool, params={}):
   """The CIRCT design entry module class decorator."""
 
+
+
   class mod(cls, mlir.ir.OpView):
 
     # Default mappings to operand/result numbers.
@@ -192,10 +193,10 @@ def _module_base(cls, extern: bool, params={}):
           name: kwargs[name] for (name, _) in mod._input_ports if name in kwargs
       }
       pass_up_kwargs = {n: v for (n, v) in kwargs.items() if n not in inputs}
-      if len(pass_up_kwargs) > 0:
+      if pass_up_kwargs:
         init_sig = inspect.signature(cls.__init__)
-        if not any(
-            [x == inspect.Parameter.VAR_KEYWORD for x in init_sig.parameters]):
+        if all(
+            x != inspect.Parameter.VAR_KEYWORD for x in init_sig.parameters):
           raise ValueError("Module constructor doesn't have a **kwargs"
                            " parameter, so the following are likely inputs"
                            " which don't have a port: " +
@@ -262,6 +263,7 @@ def _module_base(cls, extern: bool, params={}):
     def outputs() -> list[(str, mlir.ir.Type)]:
       """Return the list of input ports."""
       return mod._output_ports
+
 
   mod.__name__ = cls.__name__
   mod.OPERATION_NAME = OPERATION_NAMESPACE + cls.__name__
@@ -378,25 +380,20 @@ class _Generate:
       self.params["module_name"] = module_name
     module_name = self.sanitize(module_name)
 
-    # Track generated modules so we don't create unnecessary duplicates of
-    # modules that are structurally equivalent. If the module name exists in the
-    # top level MLIR module, assume that we've already generated it.
-    existing_module_names = [
+    if existing_module_names := [
         o for o in mod.regions[0].blocks[0].operations
         if mlir.ir.StringAttr(o.name).value == module_name
-    ]
+    ]:
+      assert (len(existing_module_names) == 1)
+      mod = existing_module_names[0]
 
-    if not existing_module_names:
+    else:
       with mlir.ir.InsertionPoint(mod.regions[0].blocks[0]), self.loc:
         mod = ModuleDefinition(self.modcls,
                                module_name,
                                input_ports=self.modcls._input_ports,
                                output_ports=self.modcls._output_ports,
                                body_builder=self._generate)
-    else:
-      assert (len(existing_module_names) == 1)
-      mod = existing_module_names[0]
-
     # Build a replacement instance at the op to be replaced.
     op_names = [name for name, _ in self.modcls._input_ports]
     with mlir.ir.InsertionPoint(op):
@@ -414,7 +411,7 @@ class _Generate:
     if isinstance(ty, hw.TypeAliasType):
       return ty.name
     if isinstance(ty, hw.ArrayType):
-      return f"{ty.size}x" + _Generate.create_type_string(ty.element_type)
+      return f"{ty.size}x{_Generate.create_type_string(ty.element_type)}"
     return str(ty)
 
   def create_module_name(self, op):
@@ -452,7 +449,7 @@ class _Generate:
       raise support.ConnectionError("Generator must return dict")
 
     # Now create the output op depending on the object type returned
-    outputs: list[Value] = list()
+    outputs: list[Value] = []
 
     # Only acceptable return is a dict of port, value mappings.
     if not isinstance(gen_ret, dict):
@@ -469,7 +466,7 @@ class _Generate:
         val = obj_to_value(gen_ret[name], port_type)
         outputs.append(val)
         gen_ret.pop(name)
-    if len(unconnected_ports) > 0:
+    if unconnected_ports:
       raise support.UnconnectedSignalError(unconnected_ports)
     if len(gen_ret) > 0:
       raise support.ConnectionError(

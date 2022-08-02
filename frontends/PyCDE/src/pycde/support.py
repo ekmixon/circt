@@ -11,10 +11,7 @@ class Value:
   def __init__(self, value, type=None):
     from .types import PyCDEType
     self.value = support.get_value(value)
-    if type is None:
-      self.type = PyCDEType(self.value.type)
-    else:
-      self.type = PyCDEType(type)
+    self.type = PyCDEType(self.value.type) if type is None else PyCDEType(type)
 
   def __getitem__(self, sub):
     ty = self.type.inner
@@ -61,7 +58,7 @@ def var_to_attribute(obj) -> ir.Attribute:
     return ir.IntegerAttr.get(attrTy, obj)
   if isinstance(obj, str):
     return ir.StringAttr.get(obj)
-  if isinstance(obj, list) or isinstance(obj, tuple):
+  if isinstance(obj, (list, tuple)):
     arr = [var_to_attribute(x) for x in obj]
     if all(arr):
       return ir.ArrayAttr.get(arr)
@@ -78,7 +75,7 @@ def var_to_attribute(obj) -> ir.Attribute:
 
 
 __dir__ = os.path.dirname(__file__)
-_local_files = set([os.path.join(__dir__, x) for x in os.listdir(__dir__)])
+_local_files = {os.path.join(__dir__, x) for x in os.listdir(__dir__)}
 
 
 def get_user_loc() -> ir.Location:

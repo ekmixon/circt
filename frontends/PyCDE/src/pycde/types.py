@@ -63,7 +63,7 @@ class _Types:
     type_scopes = [
         op for op in mod.body.operations if isinstance(op, hw.TypeScopeOp)
     ]
-    if len(type_scopes) == 0:
+    if not type_scopes:
       with mlir.ir.InsertionPoint.at_block_begin(mod.body):
         type_scopes.append(hw.TypeScopeOp.create(self.TYPE_SCOPE))
 
@@ -75,7 +75,7 @@ class _Types:
             op for op in type_scope.body.operations
             if isinstance(op, hw.TypedeclOp) and op.sym_name.value == name
         ]
-        if len(declared_aliases) != 0:
+        if declared_aliases:
           continue
         hw.TypedeclOp.create(name, type.inner_type)
 
@@ -100,26 +100,23 @@ def PyCDEType(type):
     return type
   type = circt.support.type_to_pytype(type)
 
+
+
   class _PyCDEType(type.__class__):
     """Add methods to an MLIR type class."""
 
-    # If we're subclassing a type alias, use a different 'inner' implementation.
-    if isinstance(type, hw.TypeAliasType):
-
-      @property
-      def inner(self):
-        """Return self or inner type."""
+    @property
+    def inner(self):
+      """Return self or inner type."""
+      if isinstance(type, hw.TypeAliasType):
         return PyCDEType(self.inner_type)
-    else:
-
-      @property
-      def inner(self):
-        """Return self or inner type."""
+      else:
         return self
 
     def create(self, obj):
       """Create a Value of this type from a python object."""
       from .support import obj_to_value
       return obj_to_value(obj, self, self)
+
 
   return _PyCDEType(type)

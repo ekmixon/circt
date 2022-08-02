@@ -49,7 +49,7 @@ class BasicSystemTester(cosim.CosimBase):
 
     cfgWritten = False
     for _ in range(num_msgs):
-      blob = [random.randint(0, 255) for x in range(32)]
+      blob = [random.randint(0, 255) for _ in range(32)]
       print(f"Sending data {blob}")
       ep.send(
           self.schema.Struct15822124641382404136.new_message(encrypted=False,
@@ -57,7 +57,7 @@ class BasicSystemTester(cosim.CosimBase):
 
       if not cfgWritten:
         # Check that messages queue up properly waiting for the config.
-        otp = [random.randint(0, 255) for x in range(32)]
+        otp = [random.randint(0, 255) for _ in range(32)]
         cfg.send(
             self.schema.Struct14745270011869700302.new_message(encrypt=True,
                                                                otp=otp))

@@ -9,11 +9,11 @@ from circt.dialects import hw
 class GeneratorOptions:
 
   @generator
-  def generator_a(mod):
+  def generator_a(self):
     hw.ConstantOp.create(types.i32, 1)
 
   @generator
-  def generator_b(mod):
+  def generator_b(self):
     hw.ConstantOp.create(types.i32, 2)
 
 
@@ -41,20 +41,15 @@ try:
   top3.generate()
 except RuntimeError:
   print("generator exception")
-  pass
-
 # CHECK: generator exception
 top4 = Top()
 try:
   top4.generate(["generator_a", "generator_b"])
 except RuntimeError:
   print("generator exception")
-  pass
-
 # CHECK: generator exception
 top5 = Top()
 try:
   top5.generate(["nonexistant"])
 except RuntimeError:
   print("generator exception")
-  pass

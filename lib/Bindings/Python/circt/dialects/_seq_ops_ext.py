@@ -31,12 +31,9 @@ class CompRegOp:
                name=None,
                loc=None,
                ip=None):
-    operands = []
-    results = []
     attributes = {}
-    results.append(data_type)
-    operands.append(input)
-    operands.append(clk)
+    results = [data_type]
+    operands = [input, clk]
     if reset is not None:
       operands.append(reset)
     if reset_value is not None:

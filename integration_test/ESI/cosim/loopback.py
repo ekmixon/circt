@@ -45,14 +45,10 @@ class LoopbackTester(cosim.CosimBase):
   def test_3bytes(self, num_msgs=50):
     ep = self.openEP()
     print("Testing writes")
-    dataSent = list()
-    for _ in range(num_msgs):
-      dataSent.append(self.write_3bytes(ep))
+    dataSent = [self.write_3bytes(ep) for _ in range(num_msgs)]
     print()
     print("Testing reads")
-    dataRecv = list()
-    for _ in range(num_msgs):
-      dataRecv.append(self.read_3bytes(ep))
+    dataRecv = [self.read_3bytes(ep) for _ in range(num_msgs)]
     ep.close().wait()
     assert dataSent == dataRecv
 
@@ -60,10 +56,11 @@ class LoopbackTester(cosim.CosimBase):
     cStructType = self.schema.Struct17798359158705484171
     ep = self.openEP(epNum=2, sendType=cStructType, recvType=cStructType)
     kts = []
-    for i in range(num_msgs):
+    for _ in range(num_msgs):
       kt = cStructType.new_message(
-          key=[random.randrange(0, 255) for x in range(4)],
-          text=[random.randrange(0, 16000) for x in range(6)])
+          key=[random.randrange(0, 255) for _ in range(4)],
+          text=[random.randrange(0, 16000) for _ in range(6)],
+      )
       kts.append(kt)
       ep.send(kt).wait()
 

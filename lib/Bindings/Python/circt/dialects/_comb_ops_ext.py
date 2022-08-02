@@ -55,20 +55,25 @@ class BinaryOpBuilder(NamedValueOpView):
 
 def BinaryOp(base):
 
+
+
+
   class _Class(base):
 
     @classmethod
     def create(cls, lhs=None, rhs=None, result_type=None):
       if not result_type:
-        if not lhs and not rhs:
+        if lhs or rhs:
+          result_type = infer_result_type([lhs, rhs])
+        else:
           raise TypeError("result type must be specified")
-        result_type = infer_result_type([lhs, rhs])
       mapping = {}
       if lhs:
         mapping["lhs"] = lhs
       if rhs:
         mapping["rhs"] = rhs
       return BinaryOpBuilder(cls, result_type, mapping)
+
 
   return _Class
 

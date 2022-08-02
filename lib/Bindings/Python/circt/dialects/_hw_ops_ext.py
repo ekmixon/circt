@@ -100,14 +100,12 @@ class ModuleLike:
     """
     operands = []
     results = []
-    attributes = {}
-    attributes["sym_name"] = StringAttr.get(str(name))
-
+    attributes = {"sym_name": StringAttr.get(str(name))}
     input_types = []
     input_names = []
     input_ports = list(input_ports)
-    for i in range(len(input_ports)):
-      port_name, port_type = input_ports[i]
+    for input_port in input_ports:
+      port_name, port_type = input_port
       input_types.append(port_type)
       input_names.append(StringAttr.get(str(port_name)))
     attributes["argNames"] = ArrayAttr.get(input_names)
@@ -115,8 +113,8 @@ class ModuleLike:
     output_types = []
     output_names = []
     output_ports = list(output_ports)
-    for i in range(len(output_ports)):
-      port_name, port_type = output_ports[i]
+    for output_port in output_ports:
+      port_name, port_type = output_port
       output_types.append(port_type)
       output_names.append(StringAttr.get(str(port_name)))
     attributes["resultNames"] = ArrayAttr.get(output_names)
@@ -192,7 +190,7 @@ def _create_output_op(cls_name, output_ports, entry_block, bb_ret):
         f"In {cls_name}, must return module output values")
 
   # Now create the output op depending on the object type returned
-  outputs: list[Value] = list()
+  outputs: list[Value] = []
 
   # Only acceptable return is a dict of port, value mappings.
   if not isinstance(bb_ret, dict):
@@ -224,7 +222,7 @@ def _create_output_op(cls_name, output_ports, entry_block, bb_ret):
               f"match declared type ({port_type})")
       outputs.append(val)
       bb_ret.pop(name)
-  if len(unconnected_ports) > 0:
+  if unconnected_ports:
     raise support.UnconnectedSignalError(cls_name, unconnected_ports)
   if len(bb_ret) > 0:
     raise support.ConnectionError(
@@ -262,10 +260,10 @@ class HWModuleOp(ModuleLike):
     raise AttributeError(f"unknown input port name {name}")
 
   def inputs(self) -> dict[str:Value]:
-    ret = {}
-    for (name, idx) in self.input_indices.items():
-      ret[name] = self.entry_block.arguments[idx]
-    return ret
+    return {
+        name: self.entry_block.arguments[idx]
+        for name, idx in self.input_indices.items()
+    }
 
   def add_entry_block(self):
     if not self.is_external:
@@ -311,22 +309,23 @@ class HWModuleOp(ModuleLike):
       for param in sig.parameters.values():
         if param.kind == param.VAR_KEYWORD:
           has_arg_module_op = True
-        if param.name == "module_op" and (param.kind
-                                          == param.POSITIONAL_OR_KEYWORD or
-                                          param.kind == param.KEYWORD_ONLY):
+        if param.name == "module_op" and param.kind in [
+            param.POSITIONAL_OR_KEYWORD,
+            param.KEYWORD_ONLY,
+        ]:
           has_arg_module_op = True
 
       # Emit the HWModuleOp.
       implicit_return = results is None
       symbol_name = name or f.__name__
       input_names = [v.name for v in sig.parameters.values()]
-      input_types = [port_type for port_type in inputs]
+      input_types = list(inputs)
       input_ports = zip(input_names, input_types)
 
       if implicit_return:
         output_ports = []
       else:
-        result_types = [port_type for port_type in results]
+        result_types = list(results)
         output_ports = zip([None] * len(result_types), result_types)
 
       module_op = HWModuleOp(name=symbol_name,
@@ -358,7 +357,7 @@ class HWModuleOp(ModuleLike):
           module_op.attributes["type"] = TypeAttr.get(function_type)
           # Set required resultNames attribute. Could we infer real names here?
           resultNames = [
-              StringAttr.get('result' + str(i))
+              StringAttr.get(f'result{str(i)}')
               for i in range(len(return_values))
           ]
           module_op.attributes["resultNames"] = ArrayAttr.get(resultNames)
